@@ -1,11 +1,132 @@
 <!DOCTYPE html>
-<head>
+<head> 
+<title> WebSocket Echo Test </title>
+
+<script src="react.js"></script>
+<script language="javascript" type="text/javascript">
+
+//React Code
+var wsUri = "ws://localhost:8083/";
+//Initialize Socket
+websocket = new WebSocket(wsUri);
+
+//Dynamic React Stackable Lists
+var InfoList = React.createClass({displayName: 'InfoList',
+  render: function() 
+  {
+    var createItem = function(itemText) 
+    {
+      return React.DOM.li(null, itemText);
+    };
+
+    return React.DOM.ul(null, this.props.items.map(createItem));
+  }
+});
+
+//Sender Div that holds what the user has submitted
+var Sender = React.createClass({displayName: 'Sender',
+  getInitialState: function() 
+  {
+    return {items: [], text: ''};
+  },
+  onChange: function(e) 
+  {
+    this.setState({text: e.target.value});
+  },
+  handleSubmit: function(e) 
+  {
+    websocket.send(this.state.text);
+    e.preventDefault();
+    var nextItems = this.state.items.concat([this.state.text]);
+    var nextText = '';
+    this.setState({items: nextItems, text: nextText});
+  },
+  render: function() 
+  {
+    return(
+      React.DOM.div(null, 
+      React.DOM.h3(null, "Sent"), 
+      InfoList({items: this.state.items}), 
+      
+      React.DOM.form({onSubmit: this.handleSubmit}, 
+        React.DOM.input({onChange: this.onChange, value: this.state.text}), 
+        React.DOM.button(null, 'Add #' + (this.state.items.length + 1)))
+    ))    
+  }
+});
+
+//Reciever Div that displays both connection status and what the server has submitted
+var Reciever = React.createClass({displayName: 'Reciever',
+  getInitialState: function() 
+  {
+    window.addEventListener("load", this.testWebSocket, false);
+    return {items: [], text: ''};
+  },
+  testWebSocket: function()
+  {
+    var self = this;
+
+    websocket.onopen = function(evt) { self.onOpen(evt); };
+    websocket.onclose = function(evt) { self.onClose(evt); };
+    websocket.onmessage = function(evt) { self.onMessage(evt); };
+    websocket.onerror = function(evt) { self.onError(evt); };
+  },
+  onOpen: function(evt)
+  {
+  	this.writeToScreen("CONNECTED");
+  },
+  onClose: function(evt)
+  {
+  	this.writeToScreen("DISCONNECTED");
+  },
+  onMessage: function(evt)
+  {
+  	this.writeToScreen('RESPONSE: ' + evt.data);
+  },
+  onError: function(evt)
+  {
+  	this.writeToScreen('ERROR: ' + evt.data);
+  },
+  doSend: function(message)
+  {
+  	this.writeToScreen("SENT: " + message); 
+  	websocket.send(message);
+  },
+  writeToScreen: function(message)
+  {
+  	this.setState({text: message});
+  	var nextItems = this.state.items.concat([this.state.text]);
+  	var nextText = '';
+  	this.setState({items: nextItems, text: nextText});  
+  },
+  closeSocket: function(e) {
+    websocket.close();
+  },
+render: function() {
+    return(
+      React.DOM.div(null, 
+        React.DOM.h3(null, "Recieved"), 
+        InfoList({items: this.state.items}),
+        React.DOM.form({onSubmit: this.closeSocket},
+        React.DOM.button(null, 'Close WebSocket')))        
+    )
+  }
+});
+
+</script>
+
 </head>
 
 <body>
-<h1>Simple Stream</h1>
-<img src="http://192.168.1.35:8081/stream.mjpeg" />
-
+	<h2>WebSocket Test</h2>
+	<div id="Sent"></div>
+	<div id="Recieved"></div>
 </body>
+
+<script language="javascript" type="text/javascript">
+//Must follow after the divs being manipulated
+React.renderComponent(Sender(null), document.getElementById('Sent'));
+React.renderComponent(Reciever(null), document.getElementById('Recieved'));
+</script>
 
 </html>
